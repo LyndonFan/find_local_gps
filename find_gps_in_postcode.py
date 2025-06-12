@@ -5,9 +5,12 @@ import requests
 import re
 from datetime import datetime
 import polars as pl
+from pathlib import Path
 
 from bs4 import BeautifulSoup
 from typing import Any
+
+WAIT_TIME = 0.5
 
 def mock_headers() -> dict[str, str]:
     return {
@@ -96,7 +99,7 @@ def parse_and_get_surgery_information(item) -> dict:
     return surgery_info
 
 @catch_and_wrap_errors([])
-def find_gp_surgeries(postcode: str) -> list[str]:
+def find_gp_surgeries(postcode: str) -> list[dict]:
     """
     Find GP surgery URLs for a given UK postcode from NHS website.
 
@@ -289,7 +292,7 @@ def process_review_html(html_element):
     return review_data
 
 @catch_and_wrap_errors([])
-def process_review(nhs_url: str) -> list[dict]:
+def get_reviews(nhs_url: str) -> list[dict]:
     url = f"{nhs_url}/ratings-and-reviews"
     headers = mock_headers()
     response = requests.get(url, headers=headers, timeout=10)
@@ -313,17 +316,39 @@ def main(postcode):
     # Example postcode
     postcode = postcode.replace(" ", "")
 
-    # Find GP surgeries
-    gp_surgeries = find_gp_surgeries(postcode)
-
-    # Display results
-    if gp_surgeries:
-        print(f"\nGP Surgeries found for {postcode}:")
-        for i, surgery in enumerate(gp_surgeries, 1):
-            print(f"{i}. {surgery['name']} {surgery['nhs_url']}")
+    gp_surgeries_location = f"raw/{postcode}_gp_surgeries.csv"
+    if Path(gp_surgeries_location).exists():
+        gp_surgeries = pl.read_csv(gp_surgeries_location).to_dicts()
     else:
-        print(f"No GP surgeries found for {postcode}")
-    return gp_surgeries
+        # Find GP surgeries
+        gp_surgeries = find_gp_surgeries(postcode)
+
+        # Display results
+        if gp_surgeries:
+            print(f"\nGP Surgeries found for {postcode}:")
+            for i, surgery in enumerate(gp_surgeries, 1):
+                print(f"{i}. {surgery['name']} {surgery['nhs_url']}")
+        else:
+            print(f"No GP surgeries found for {postcode}")
+            return []
+        
+        pl.DataFrame(gp_surgeries).write_csv(gp_surgeries_location)
+
+    all_surgery_details = []
+    all_reviews = []
+    for surgery in gp_surgeries:
+        nhs_url = surgery["nhs_url"]
+        time.sleep(WAIT_TIME)
+        details = get_surgery_details(nhs_url)
+        all_surgery_details.append({**details, "id": surgery["id"]})
+        time.sleep(WAIT_TIME)
+        reviews = get_reviews(nhs_url)
+        for i, r in enumerate(reviews):
+            reviews[i] = {**r, "id": surgery["id"]}
+        all_reviews.extend(reviews)
+    
+    pl.DataFrame(all_surgery_details).write_json(f"raw/{postcode}_surgery_details.json")
+    pl.DataFrame(all_reviews).write_json(f"raw/{postcode}_surgery_reviews.json")
 
 if __name__ == "__main__":
     postcode = sys.argv[1]
