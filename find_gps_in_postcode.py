@@ -229,12 +229,10 @@ def process_review_html(html_element):
               - review_content: str
               - review_response: str or None
     """
-    soup = BeautifulSoup(html_element, "html.parser")
-
     review_data = {}
 
     # Extract rating
-    rating_text = soup.find("p", id=re.compile(r"star-rating-\d+"))
+    rating_text = html_element.find("p", id=re.compile(r"star-rating-\d+"))
     if rating_text:
         rating_match = re.search(r"Rated (\d+) star", rating_text.get_text())
         review_data["rating"] = int(rating_match.group(1)) if rating_match else None
@@ -242,7 +240,7 @@ def process_review_html(html_element):
         review_data["rating"] = None
 
     # Extract review title
-    title_element = soup.find("h3", class_="nhsuk-body-l")
+    title_element = html_element.find("h3", class_="nhsuk-body-l")
     if title_element:
         # Remove the visually hidden text and get clean title
         title_text = title_element.get_text().strip()
@@ -252,7 +250,7 @@ def process_review_html(html_element):
         review_data["review_title"] = None
 
     # Extract review date
-    date_element = soup.find("p", string=re.compile(r"by .* - Posted on"))
+    date_element = html_element.find("p", string=re.compile(r"by .* - Posted on"))
     if date_element:
         date_match = re.search(
             r"Posted on (\d{1,2} \w+ \d{4})", date_element.get_text()
@@ -271,14 +269,14 @@ def process_review_html(html_element):
         review_data["review_date"] = None
 
     # Extract review content
-    comment_element = soup.find("p", class_="comment-text")
+    comment_element = html_element.find("p", class_="comment-text")
     if comment_element:
         review_data["review_content"] = comment_element.get_text().strip()
     else:
         review_data["review_content"] = None
 
     # Extract review response
-    response_div = soup.find("div", {"aria-label": "Organisation review response"})
+    response_div = html_element.find("div", {"aria-label": "Organisation review response"})
     if response_div:
         response_text = response_div.get_text().strip()
         # Check if it's a "has not yet replied" message
@@ -303,8 +301,7 @@ def get_reviews(nhs_url: str) -> list[dict]:
     review_elements = review_list.find_all("li")
     reviews = []
     for review_element in review_elements:
-        review_html = review_element.get_text()
-        review_data = process_review_html(review_html)
+        review_data = process_review_html(review_element)
         reviews.append(review_data)
 
     return reviews
