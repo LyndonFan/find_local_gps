@@ -12,6 +12,7 @@ from typing import Any
 
 WAIT_TIME = 0.5
 
+
 def mock_headers() -> dict[str, str]:
     return {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -21,6 +22,7 @@ def mock_headers() -> dict[str, str]:
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
     }
+
 
 def catch_and_wrap_errors(default_response: Any):
     def wrapper(func):
@@ -35,11 +37,12 @@ def catch_and_wrap_errors(default_response: Any):
                 return []
             except Exception as e:
                 return default_response
-         
+
         inner.__name__ = func.__name__
         return inner
 
     return wrapper
+
 
 def parse_and_get_surgery_information(item) -> dict:
     surgery_info = {}
@@ -98,6 +101,7 @@ def parse_and_get_surgery_information(item) -> dict:
 
     return surgery_info
 
+
 @catch_and_wrap_errors([])
 def find_gp_surgeries(postcode: str) -> list[dict]:
     """
@@ -137,10 +141,13 @@ def find_gp_surgeries(postcode: str) -> list[dict]:
         for item in search_results:
             surgery_info = parse_and_get_surgery_information(item)
             if surgery_info.get("name") and surgery_info.get("nhs_url"):
-                gp_surgeries.append({**surgery_info, "is_in_catchment": is_in_catchment})
+                gp_surgeries.append(
+                    {**surgery_info, "is_in_catchment": is_in_catchment}
+                )
 
     print(f"Found {len(gp_surgeries)} GP surgery links")
     return gp_surgeries
+
 
 @catch_and_wrap_errors({})
 def get_surgery_details(surgery_url: str) -> dict:
@@ -214,6 +221,7 @@ def get_surgery_details(surgery_url: str) -> dict:
     print(f"Successfully extracted details for: {name}")
     return surgery_details
 
+
 def process_review_html(html_element):
     """
     Process HTML snippet to extract review information.
@@ -276,7 +284,9 @@ def process_review_html(html_element):
         review_data["review_content"] = None
 
     # Extract review response
-    response_div = html_element.find("div", {"aria-label": "Organisation review response"})
+    response_div = html_element.find(
+        "div", {"aria-label": "Organisation review response"}
+    )
     if response_div:
         response_text = response_div.get_text().strip()
         # Check if it's a "has not yet replied" message
@@ -288,6 +298,7 @@ def process_review_html(html_element):
         review_data["review_response"] = None
 
     return review_data
+
 
 @catch_and_wrap_errors([])
 def get_reviews(nhs_url: str) -> list[dict]:
@@ -305,6 +316,7 @@ def get_reviews(nhs_url: str) -> list[dict]:
         reviews.append(review_data)
 
     return reviews
+
 
 def main(postcode):
     """
@@ -328,7 +340,7 @@ def main(postcode):
         else:
             print(f"No GP surgeries found for {postcode}")
             return []
-        
+
         pl.DataFrame(gp_surgeries).write_csv(gp_surgeries_location)
 
     all_surgery_details = []
@@ -343,9 +355,10 @@ def main(postcode):
         for i, r in enumerate(reviews):
             reviews[i] = {**r, "id": surgery["id"]}
         all_reviews.extend(reviews)
-    
+
     pl.DataFrame(all_surgery_details).write_json(f"raw/{postcode}_surgery_details.json")
     pl.DataFrame(all_reviews).write_json(f"raw/{postcode}_surgery_reviews.json")
+
 
 if __name__ == "__main__":
     postcode = sys.argv[1]
