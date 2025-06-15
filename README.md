@@ -48,3 +48,9 @@ The resulting CSV file has the following columns:
 - opening_times_monday to opening_times_sunday: Opening times of the GP for each day of the week, or empty/null if it's not open.
 - num_reviews: Number of reviews for the GP
 - avg_rating, min_rating, max_rating: Average, minimum and maximum ratings of the GP on the NHS website. If there aren't any reviews on the website, it will be 0 here.
+
+## Disclaimer
+
+All data is found on public pages on [NHS](https://www.nhs.uk/service-search/).
+
+I did use AI (Claude) to help write some code. I've reviewed it and tested it to check the results make sense. It gave wrong information -- especially about polars at times -- but I knew enough to fix it. On the other hand, it helped massively with web scraping by generating the boilerplate and finding which fields to extract from.
