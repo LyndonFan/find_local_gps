@@ -16,7 +16,7 @@ Or if you don't have uv,
 python -m venv .venv
 source .venv/bin/activate
 # or appropriate command to activate the venv
-uv pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 Once the environment is set up, start by getting the data from NHS
